@@ -13,6 +13,7 @@ namespace Ollie;
 /**
  * Set up theme defaults and register various WordPress features.
  */
+
 function setup() {
 
 	// Enqueue editor styles and fonts.
@@ -20,6 +21,12 @@ function setup() {
 
 	// Remove core block patterns.
 	remove_theme_support( 'core-block-patterns' );
+
+	// Remove the sample content
+	wp_delete_post( 1, true ); // Delete the page with ID 1
+	wp_delete_post( 2, true );
+
+add_action( 'wp_initialize_site', 'disable_sample_content_on_multisite', 10, 6 );
 }
 add_action( 'after_setup_theme', __NAMESPACE__ . '\setup' );
 
@@ -208,3 +215,43 @@ function template_part_areas( array $areas ) {
 	return $areas;
 }
 add_filter( 'default_wp_template_part_areas', __NAMESPACE__ . '\template_part_areas' );
+
+// Restrict Contributor role to edit only one specific page
+function restrict_contributor_access() {
+    // Get the current user's capabilities
+    $user = wp_get_current_user();
+
+    // Check if the user is a subscriber
+    if (in_array('contributor', $user->roles)) {
+		
+		 $capabilitiesToRemove = array (
+			 'edit_posts',
+			 'edit_published_posts',
+			 'publish_posts',
+			 'delete_posts',
+			 'delete_published_posts',
+			 'moderate_comments',
+    	 );
+
+		foreach ( $capabilitiesToRemove as $removedCapability ) {
+			$user->remove_cap( $removedCapability );
+		}
+    }
+}
+add_action('init',  __NAMESPACE__ . '\restrict_contributor_access');
+
+// Edit WP menu
+function edit_wp_menu() {
+    // Get the current user's capabilities
+    $user = wp_get_current_user();
+
+    // Check if the user is a subscriber
+    if (in_array('contributor', $user->roles)) {
+		remove_menu_page('edit.php');
+		remove_menu_page('edit-comments.php');
+		remove_menu_page('tools.php');
+		remove_menu_page('index.php');
+    }
+}
+add_action('admin_menu',  __NAMESPACE__ . '\edit_wp_menu');
+
